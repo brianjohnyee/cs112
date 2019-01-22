@@ -144,7 +144,13 @@
         ; (goto,    (lambda (x) (lable-get x)))
      ))
 
-
+(for-each
+    (lambda (item)
+             (variable-put! (car item) (cadr item)))
+    `(
+        (pi 3.141592653589793)
+        (e 2.718281828459045)
+     ))
 
 
 
@@ -157,6 +163,7 @@
     (for-each 
         (lambda (wf)
             (display wf)
+            (display " ")
         ) 
         input
 
