@@ -91,6 +91,11 @@
 (define (variable-put! key value)
         (hash-set! *variable-table* key value))
 
+(define (label-get key)
+        (hash-ref *hash* key '(no such key in 
+                                          hash)))
+(define (label-put! key value)
+        (hash-set! *hash* key value))
 ;; putting keys and values into hashtable *functionHash*
 ;; from symbols.scm
 (for-each
@@ -130,6 +135,8 @@
         (print,  (lambda poop (printer poop)))
         (let,     (lambda (x y) (let-sbir x y)))
         (dim,  (lambda (x y) (dim-sbir x y)))
+        (goto, (lambda (x) (label-get x)))
+
 
         ; (let,     (lambda (x y) (let-sbir x y)))
         ; (input,   (lambda (x) (let-sbir x (read)) (size (variable-get x))))
@@ -173,16 +180,43 @@
     )
 )
 
+
+(define (let-sbir-array variable1 variable2 value)
+    ; (display variable1)
+    ; (display variable2)
+    ; (display value)
+    ; (vector-ref (variable-get variable1)  (variable-get variable2))
+    (vector-set! (variable-get variable1) (variable-get variable2) value)
+    ; (newline)
+    ; (display "eriogneroigneroignerg")
+    ; (newline)
+    ; (display     (vector-ref (variable-get variable1)  (variable-get variable2)))
+    ; (newline)
+    ; (display (hash-ref *variable-table* variable1))
+    ; (newline)
+)
+
+(define (let-print-array variable1 variable2)
+    (display     (vector-ref (variable-get variable1)  (variable-get variable2)))
+    ; (display (hash-ref *variable-table* variable1))
+
+)
+
+
 (define (dim-sbir variable value)
-    (newline)
-    (display "in funciton")
-    (newline)
-    (display variable)
-    (newline)
-    (display value)
-    (newline)
-    (display (make-vector 10))
-    (display (make-vector value 1.0))
+    ; (newline)
+    ; (display "in funciton")
+    ; (newline)
+    ; (display variable)
+    ; (newline)
+    ; (display value)
+    ; (newline)
+    ;; puts the array in the variable hash table
+    (variable-put! variable (make-vector value 0.0))
+    ; (display (hash-ref *variable-table* variable))
+
+    ; (display (make-vector 10))
+    ; (display (make-vector value 1.0))
 )
 
 
@@ -211,13 +245,14 @@
 ;; to have else statement for if statements. so it is filler?
 
 
+
 (define (put-in-hash list)
     (when (not (null? list))
         (let ((first(caar list)))
             (when (number? first)
                 (if (not(null? (cdar list)))
                     (if(symbol? (cadar list))
-                        (hash-set! *hash* (cadar list) (caar list))
+                        (hash-set! *hash* (cadar list)  list)
                         (+ 1 1)  
                     )
                 (+ 1 1)
@@ -229,41 +264,66 @@
 )
 
 
+
+
 ;; interpret-program function
 ;; outline part b
 
-(define(interpret-program list)
-    (when(not(null? list))
-        (let ((first(caar list)))
-            (if(null? (cdar list)) ;; the line only contains line number. believe this will be the first if statement and the rest of the ifs are nested in here
-                (interpret-program (cdr list)) ;;https://stackoverflow.com/questions/30041672/if-else-clause-or-cond-in-racket
-                (if(list? (cadar list)) ;; (# (statement)) this is a statement because it is a list in the list therefore statement
-                    (cond 
-                        ((equal? 'print (caadar list))
-                            (begin ;; how to use 'begin' to have multiple statements https://stackoverflow.com/questions/11263359/is-there-a-possibility-of-multiple-statements-inside-a-conditional-statements-b
-                                (evalexpr (cadar list))
-                                ;; move to the next line
-                                (interpret-program (cdr list))
-                            )
-                        )
-                        ((equal? 'let (caadar list))
-                            ;; cadar gets the statement which is in a list
-                            (evalexpr (cadar list))
-                            ;; move to the next line
-                            (interpret-program (cdr list))
-                        )
-                        ((equal? 'dim (caadar list))
-                            (display (cadar list))
-                            ; (display (cadadr list))
-                            (evalexpr (cadar list))
-                            ;; move to the next line
-                            (interpret-program (cdr list))
-                        )
+(define (interpret-program list)
+    (cond
+        ((null? list)
+            list
+        )
+        ((null? (cdar list))
+            (interpret-program (cdr list))
+        )
+        ((list? (cadar list))
+            (cond 
+                ((equal? 'print (caadar list))
+                    (begin ;; how to use 'begin' to have multiple statements https://stackoverflow.com/questions/11263359/is-there-a-possibility-of-multiple-statements-inside-a-conditional-statements-b
+                        (evalexpr (cadar list))
+                        ;; move to the next line
+                        (interpret-program (cdr list))
                     )
-                    (+ 1 1)
+                )
+                ((equal? 'let (caadar list))
+                    ;; cadar gets the statement which is in a list
+                    (evalexpr (cadar list))
+                    ;; move to the next line
+                    (interpret-program (cdr list))
+                )
+                ((equal? 'dim (caadar list))
+                    ; (display (cadar list))
+                    ; (display (cadadr list))
+                    (evalexpr (cadar list))
+                    ;; move to the next line
+                    (interpret-program (cdr list))
+                )
+                ((equal? 'goto (caadar list))
+                    ; (display (cadar list))
+                    (interpret-program (evalexpr (cadar list)))
+                )
+                (else 
+                    (evalexpr (cadar lines)) 
+                    (inter (cdr lines))
                 )
             )
         )
+            ((null? (cddar list))
+                (interpret-program (cdr list))
+            )
+            (else
+                (cond
+                    ((equal? 'goto (car (caddar list)))
+                        (interpret-program (evalexpr (caddar list)))
+                    )
+                    (else
+                            (evalexpr (caddar list))
+                            (interpret-program (cdr list))
+                        )
+                    )
+                )  
+        
     )
 )
 
@@ -292,8 +352,9 @@
 
 
 
+;;Evaluates the statements
 (define (evalexpr expr)
-    (cond
+    (cond 
         ((null? expr) 
             expr
         )
@@ -301,53 +362,52 @@
             expr
         )
         ((string? expr) 
-            ;; the print statements 
             expr
         )
         ((var? expr) 
-            ;; variables such as i j k etc
             (variable-get expr)
         )
-        ;; checks if it is
-        ((function? expr)
-
+        ((function? expr) 
             (cond
-                ((equal? (car expr) 'let)
-                    ; (display (cadr expr))
-                    (let-sbir (cadr expr) (evalexpr (caddr expr)))
+                ((equal? (car expr) 'let) 
+                    (if(list? (cadr expr))
+                        (begin
+                            (let-sbir-array (cadadr expr) (car(cddadr expr)) (caddr expr))
+                        )
+                        (begin
+                            (let-sbir (cadr expr) (evalexpr (caddr expr)))
+                        )
+                    )
                 )
                 ((equal? (car expr) 'print)
-                    (display "print")
-                    (apply(function-get (car expr)) (map evalexpr (cdr expr)))
+                    (if(null? (cdr expr))
+                        (newline)
+                        (if(list? (cadr expr))
+                            (begin
+                                (let-print-array (cadadr expr) (car(cddadr expr)))
+                            )
+                            (begin
+                                (apply(function-get (car expr)) (map evalexpr (cdr expr)))
+                            )
+                        )
+                    )
                 )
                 ((equal? (car expr) 'dim)
-
-                    (newline)
-                    (display expr)
-                    (newline)
-                    ;; cadadr is the variable
-                    (display (cadadr expr))
-                    (newline)
-                    ;; caddr(cadr) is the number
-                    (display (caddr(cadr expr)))
-                    (newline)
-                    ;; caadr is asub
-                    (display (caadr expr))
-                    (newline)
-                    ; (display (cdr(caadr expr)))
-                    (display "ehr")
-                                      (newline)
                     (dim-sbir (cadadr expr) (caddr(cadr expr)))
                 )
-                (else
-                    (display "huh")
+                (else 
                     (apply(function-get (car expr)) (map evalexpr (cdr expr)))
-                )
+                )   
             )
         )
+        ((pair? expr) 
+            (map evalexpr expr)
+        )
+        (else 
+            expr
+        )
     )
-
-)
+)         
 
 
 
@@ -398,14 +458,10 @@
                ; (display (cdar program))
 
                ;;this puts the labels of the input into a hash table 
-               (newline)
                (put-in-hash program)
-               (newline)
-               ;; GETTING ERROR RIGHT HERE
-               ;; SO THE PROBLEM IS INTERPRET-PROGRAM
                (interpret-program program)
-                ; (display  (hash-ref *hash* ))
-                (newline)
+                ; (display  (hash-ref *hash* label))
+                ; (newline)
                 (printf "~~~~~~~~ ~n")
                 ;; this is to test if the label hash is being inputted correctly
                 ; (hash-for-each *hash*
