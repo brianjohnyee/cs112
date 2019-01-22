@@ -136,6 +136,7 @@
         (let,     (lambda (x y) (let-sbir x y)))
         (dim,  (lambda (x y) (dim-sbir x y)))
         (goto, (lambda (x) (label-get x)))
+       
 
 
         ; (let,     (lambda (x y) (let-sbir x y)))
@@ -196,8 +197,20 @@
     ; (newline)
 )
 
+(define (ifStatement x y z)
+  (display "in ifStatement")
+    (display x)
+        (display y)
+            (display z)
+    (if (evalexpr x)
+        (label-get y)
+        (cdr z)
+    )
+)
+
 (define (let-print-array variable1 variable2)
     (display     (vector-ref (variable-get variable1)  (variable-get variable2)))
+    (newline)
     ; (display (hash-ref *variable-table* variable1))
 
 )
@@ -303,9 +316,20 @@
                     ; (display (cadar list))
                     (interpret-program (evalexpr (cadar list)))
                 )
+                ((equal? 'if (caadar list))
+                    ; (newline)
+                    ; (display (car(cdadar list)))
+                    ; (newline)
+                    ; (display (cadr(cdadar list)))
+                    ; (newline)
+                    ; (display (cdr list))
+                    ; (newline)
+                    (interpret-program(ifStatement (car(cdadar list)) (cadr(cdadar list))  list))
+
+                )
                 (else 
-                    (evalexpr (cadar lines)) 
-                    (inter (cdr lines))
+                    (evalexpr (cadar list)) 
+                    (inter (cdr list))
                 )
             )
         )
@@ -395,6 +419,15 @@
                 ((equal? (car expr) 'dim)
                     (dim-sbir (cadadr expr) (caddr(cadr expr)))
                 )
+                ; ((equal? (car expr) 'if)
+                ;     (display "carrie")
+                ;     ;; cadr gives (<= fib max)
+                ;     ;; caddr gives loop (the label)
+                ;     (display (caddr expr) )
+                ;     (ifStatement (cadr expr) (caddr expr) (list))
+                ;     (display "carrie")
+
+                ; )
                 (else 
                     (apply(function-get (car expr)) (map evalexpr (cdr expr)))
                 )   
