@@ -12,7 +12,10 @@
 ;;    program, which is the executed.  Currently it is only printed.
 ;;
 
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; GIVEN
+
 (define *stdin* (current-input-port))
 (define *stdout* (current-output-port))
 (define *stderr* (current-error-port))
@@ -66,19 +69,20 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; modified from symbols.scm
+;; defining hashtables, hashtable functions, and initialing specifc 
+;; keys and values into function and variable hashtable.
 
-;; brians yee
-;; our stuff
-
-
-;; define hashtabels
-
+;; label hashtable
 (define *hash* (make-hash))
+;; function hashtable
 (define *functionHash* (make-hash))
+;; variable hashtable
 (define *variable-table* (make-hash))
 
-;; hashtabel get/put functions to make it simpler
 ;; from symbols.scm
+;; hashtabel get/put functions to make it simpler
 (define (function-get key)
         (hash-ref *functionHash* key '(no such key in
                                          *functionHash*)))
@@ -96,8 +100,9 @@
                                           hash)))
 (define (label-put! key value)
         (hash-set! *hash* key value))
+
 ;; putting keys and values into hashtable *functionHash*
-;; from symbols.scm
+
 (for-each
     (lambda (item)
              (function-put! (car item) (cadr item)))
@@ -133,120 +138,24 @@
         (acos, acos) 
         (atan,    (lambda(x)(atan (if (equal? x 0) 0.0 x))))
         (print,  (lambda poop (printer poop)))
-        (let,     (lambda (x y) (let-sbir x y)))
+        (let,     (lambda (x y) (letStatement x y)))
         (dim,  (lambda (x y) (dim-sbir x y)))
         (goto, (lambda (x) (label-get x)))
-       
-
-
-        ; (let,     (lambda (x y) (let-sbir x y)))
-        ; (input,   (lambda (x) (let-sbir x (read)) (size (variable-get x))))
-        ; (goto,    (lambda (x) (lable-get x)))
+        (input   ,(lambda (x) (inputer x)))
      ))
 
+;; putting in pi and e in variable hashtable to satisfy 25-pi-e-fns.sbir
 (for-each
     (lambda (item)
              (variable-put! (car item) (cadr item)))
     `(
+        (counter 0)
         (pi 3.141592653589793)
         (e 2.718281828459045)
      ))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-;; input is a list, which we pass in when we do map(cdr)
-;; so i believe we do apply car(list) "print" and map on to
-;; the cdr(list)
-(define (printer input)
-    ;; put it in () (wf) because if you dont, it will be put in a list
-    ;;https://docs.racket-lang.org/guide/lambda.html
-    (for-each 
-        (lambda (wf)
-            (display wf)
-            (display " ")
-        ) 
-        input
-
-    )
-    ;; can't put the new line inside lambda function 
-    ;; cause when i did 02-exprs.sbir it would print the 
-    ;; answer on a new line. but not exactly sure how it still
-    ;; works when i do a newLine here
-    (newline)
-)
-
-(define (let-sbir variable value)
-    (if (var? value) 
-        (let-sbir variable (variable-get value))
-        (if (list? variable)
-            (if (var? (cadr variable)) 
-                (vector-set! (variable-get (car variable)) (-(variable-get (cadr variable))1) value)
-                (vector-set! (variable-get (car variable)) (-(cadr variable)1) value)
-            )
-            (variable-put! variable value)
-        )
-    )
-)
-
-
-(define (let-sbir-array variable1 variable2 value)
-    ; (display variable1)
-    ; (display variable2)
-    ; (display value)
-    ; (vector-ref (variable-get variable1)  (variable-get variable2))
-    (vector-set! (variable-get variable1) (variable-get variable2) value)
-    ; (newline)
-    ; (display "eriogneroigneroignerg")
-    ; (newline)
-    ; (display     (vector-ref (variable-get variable1)  (variable-get variable2)))
-    ; (newline)
-    ; (display (hash-ref *variable-table* variable1))
-    ; (newline)
-)
-
-(define (ifStatement x y z)
-  (display "in ifStatement")
-    (display x)
-        (display y)
-            (display z)
-    (if (evalexpr x)
-        (label-get y)
-        (cdr z)
-    )
-)
-
-(define (let-print-array variable1 variable2)
-    (display     (vector-ref (variable-get variable1)  (variable-get variable2)))
-    (newline)
-    ; (display (hash-ref *variable-table* variable1))
-
-)
-
-
-(define (dim-sbir variable value)
-    ; (newline)
-    ; (display "in funciton")
-    ; (newline)
-    ; (display variable)
-    ; (newline)
-    ; (display value)
-    ; (newline)
-    ;; puts the array in the variable hash table
-    (variable-put! variable (make-vector value 0.0))
-    ; (display (hash-ref *variable-table* variable))
-
-    ; (display (make-vector 10))
-    ; (display (make-vector value 1.0))
-)
-
-
-;; when '/' is called from sbir file
-;; need to probably change later when divide by 0
-;; stackoverflow source on how to do divison
-;; https://stackoverflow.com/questions/1025390/how-do-i-get-mit-scheme-to-return-a-floating-point-number
-(define (divide-sbir x y)
-    (exact->inexact (/ x y))
-)
 
 ;; this is from listhash.scm and will be modified for our use
 ;; Part a) of suggested outline "check each line for a label."
@@ -284,7 +193,7 @@
 )
 
 
-
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; interpret-program function
 ;; outline part b
@@ -300,7 +209,7 @@
         ((list? (cadar list))
             (cond 
                 ((equal? 'print (caadar list))
-                    (begin ;; how to use 'begin' to have multiple statements https://stackoverflow.com/questions/11263359/is-there-a-possibility-of-multiple-statements-inside-a-conditional-statements-b
+                    (begin 
                         (evalexpr (cadar list))
                         ;; move to the next line
                         (interpret-program (cdr list))
@@ -331,8 +240,13 @@
                     ; (newline)
                     ; (display (cdr list))
                     ; (newline)
-                    (interpret-program(ifStatement (car(cdadar list)) (cadr(cdadar list))  list))
+                    (interpret-program(ifStatement (car(cdadar list)) 
+                      (cadr(cdadar list))  list))
 
+                )
+                ((equal? 'input (caadar list))
+                    (evalexpr (cadar list))
+                    (interpret-program (cdr list))
                 )
                 (else 
                     (evalexpr (cadar list)) 
@@ -343,10 +257,15 @@
             ((null? (cddar list))
                 (interpret-program (cdr list))
             )
+            ;; if there is (# label (statement))
             (else
                 (cond
                     ((equal? 'goto (car (caddar list)))
                         (interpret-program (evalexpr (caddar list)))
+                    )
+                    ((equal? 'if (car(caddar list)))
+                    (interpret-program(ifStatement (cadr(caddar list)) 
+                          (caddr(caddar list)) list))
                     )
                     (else
                             (evalexpr (caddar list))
@@ -358,14 +277,15 @@
     )
 )
 
-
-
-;; need to create the function hash table, copy paste from symbol.scm 
-;; and add in the other statements such as print, goto, etc.
-
-
 ;; modifiying symbols.scm
-;; checks if it is in the function hash table
+;; These functions are called by (evalexp expr)
+;; These are to check what kind of statement is passed in
+;; to determine how to evaluate the expression
+;; What is being passed in is a LIST because the format 
+;; of SBIR files is (# LABEL (statement))
+
+;; This checks if the car of the statement is in the function hashtable.
+;; if so, return true, else return false.
 (define (function? function)
     (if (list? function)
         (if (procedure? (hash-ref *functionHash* (car function))) 
@@ -375,15 +295,197 @@
         #f)
 )
 
+
+;; This checks the variable hashtable to see if the variable
+;; is set to a number. If so, return true, else returns false.
 (define (var? variable)
-    (if (number? (variable-get variable )) #t #f)
+    (if (number? (variable-get variable )) 
+        #t 
+        #f
+    )
 )       
 
 
 
 
+;; EVALEXP FUNCTIONS
+;; INPUT Statement
+(define (inputer . expr)
+    (define (get-input expr)
+        (when (not (null? (car expr)))
+            (variable-put! (car expr) (void))
+            (let ((object (read)))
+                (cond 
+                    ((eof-object? object)
+                        (variable-put! 'counter -1)
+                    )
+                    ((number? object)
+                        (variable-put! (car expr) object)
+      (variable-put! 'counter (+ (variable-get 'counter) 1))
+                    )
+                    (else 
+                        (begin (printf "invalid number: ~a~n" object))
+                    )
+                  )
+            ) 
+            (when (not (null? (cdr expr)))
+            (get-input (cdr expr)))
+        )
+    )
+    (get-input expr)
+)
 
-;;Evaluates the statements
+
+;; this funciton is in the function hashtable
+;; input is a list, which we pass in 
+;;when we do map(cdr) from evalexp "print".
+;; Then for each item in the list, we display it 
+;;and an extra white space afterwards
+(define (printer input)
+    ;; put it in (), (wf) because if you dont, it will be put in a list
+    ;;https://docs.racket-lang.org/guide/lambda.html
+    (for-each 
+        (lambda (wf)
+            (display wf)
+            (display " ")
+        ) 
+        input
+
+    )
+    ;; can't put the new line inside lambda function 
+    ;; cause when i did 02-exprs.sbir it would print the 
+    ;; answer on a new line. but not exactly sure how it still
+    ;; works when i do a newLine here
+    (newline)
+)
+
+;; this function is called if we are printing elements of an array
+;; the only problem with this is the index must 
+;;be given in terms of a variable
+;; because the function takes in 2 variables not (variable number)
+(define (print-array variable1 variable2)
+    (display  (vector-ref (variable-get variable1)  
+      (- (variable-get variable2) 1)))
+    (newline)
+    ; (display (hash-ref *variable-table* variable1))
+)
+
+;; This checks the variable hashtable to see if the variable
+;; is set to a number. If so, return true, else returns false.
+; (define (var? variable)
+;     (if (number? (variable-get variable )) 
+;         #t 
+;         #f
+;     )
+; )    
+
+;; need to go over this one
+;; only goes through inhere1
+;; need to check that out with rest of the 
+(define (letStatement variable value)
+
+            (begin
+                (variable-put! variable value)
+                ; (display "in here1")
+                ; (newline)
+            )
+
+)
+
+;; this sets a specific index of an array to be the value
+;; variable1 is the name of the array, variable2 
+;;is the index of the array
+;; and value is what to change the array to
+(define (sbir-array variable1 variable2 value)
+    ; (display variable1)
+    ; (display variable2)
+    ; (display value)
+    ; (vector-ref (variable-get variable1)  (variable-get variable2))
+
+    (vector-set! (variable-get variable1) 
+    (- (variable-get variable2) 1) value)
+)
+
+;; x is the statement to be evaluated which is the loop control
+;; y is the label, which you get the value, 
+;;which is the top level of the list
+;; z is the list (rest of the program after loop)
+;; if x is true, get label y, else move on to rest of program
+(define (ifStatement x y z)
+  ; (display "in ifStatement")
+  ;   (display x)
+  ;       (display y)
+  ;           (display z)
+    (if (evalexpr x)
+        (label-get y)
+        (cdr z)
+    )
+)
+
+;; not in use doesnt work
+(define (superIf x y)
+
+    (if ((function-get '=) (vector-ref (variable-get (car(cdadar x)))  
+      (variable-get (cadr(cdadar x)))) (caddar x))
+        (label-get (cadr x))
+        (begin
+        ; (display "hi")
+        ; (newline) 
+        ; (display (cdr y))
+        (cdr y)
+        )
+    )
+)
+
+;; this function initalizes an array 
+;; variable is the name of the array, value is the size of the array
+;; i initalize each index to 0.0
+(define (dim-sbir variable value)
+
+    (if (number? value)
+    ; (newline)
+    ; (display "in funciton")
+    ; (newline)
+    ; (display variable)
+    ; (newline)
+    ; (display value)
+    ; (newline)
+    ;; puts the array in the variable hash table
+        (variable-put! variable (make-vector value 0.0))
+        (variable-put! variable (make-vector (variable-get value) 0.0))
+
+
+    )
+    ; (display (hash-ref *variable-table* variable))
+
+    ; (display (make-vector 10))
+    ; (display (make-vector value 1.0))
+)
+
+
+;; when '/' is called from sbir file
+;; need to probably change later when divide by 0
+;; stackoverflow source on how to do divison
+(define (divide-sbir x y)
+    (if (= y 0)
+        (if (= x 0)
+            "nan.0"
+            (if (> x 0)
+                "+inf.0"
+                "-inf.0" 
+            )
+        )
+        (exact->inexact (/ x y))
+    )
+
+)
+
+
+;; MODIFIED FROM evalexp.scm
+;; Determines what kind of statement is being passed in.
+;; The statements are then evaluated passed on what its kind.
+;; main changes are if the statement is a function? or a var?
+
 (define (evalexpr expr)
     (cond 
         ((null? expr) 
@@ -403,10 +505,12 @@
                 ((equal? (car expr) 'let) 
                     (if(list? (cadr expr))
                         (begin
-                            (let-sbir-array (cadadr expr) (car(cddadr expr)) (caddr expr))
+                            (sbir-array (cadadr expr) 
+                            (car(cddadr expr)) (caddr expr))
                         )
                         (begin
-                            (let-sbir (cadr expr) (evalexpr (caddr expr)))
+                            (letStatement (cadr expr) (evalexpr 
+                              (caddr expr)))
                         )
                     )
                 )
@@ -415,10 +519,12 @@
                         (newline)
                         (if(list? (cadr expr))
                             (begin
-                                (let-print-array (cadadr expr) (car(cddadr expr)))
+                                (print-array (cadadr expr) 
+                                (car(cddadr expr)))
                             )
                             (begin
-                                (apply(function-get (car expr)) (map evalexpr (cdr expr)))
+                                (apply(function-get (car expr)) 
+                                (map evalexpr (cdr expr)))
                             )
                         )
                     )
@@ -426,17 +532,12 @@
                 ((equal? (car expr) 'dim)
                     (dim-sbir (cadadr expr) (caddr(cadr expr)))
                 )
-                ; ((equal? (car expr) 'if)
-                ;     (display "carrie")
-                ;     ;; cadr gives (<= fib max)
-                ;     ;; caddr gives loop (the label)
-                ;     (display (caddr expr) )
-                ;     (ifStatement (cadr expr) (caddr expr) (list))
-                ;     (display "carrie")
-
-                ; )
+                ((equal? (car expr) 'input)
+                    (apply inputer (cdr expr))
+                )
                 (else 
-                    (apply(function-get (car expr)) (map evalexpr (cdr expr)))
+                    (apply(function-get (car expr)) 
+                      (map evalexpr (cdr expr)))
                 )   
             )
         )
@@ -450,69 +551,54 @@
 )         
 
 
+;; TESTING HASH TABLES
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;; symbols.scm
-;; this function is being used to see if my hash tables
-;; are being insertted correctly
-;; basically prints out the key and value of hash table
+;; FROM symbols.scm
+;; this function is just being used to see if
+;; hash tables are being inserted correctly
+;; I don't call it, just for testing purpose
 (define (show label item)
         (newline)
         (display label) (display ":") (newline)
         (display item) (newline))
 
-;; symbols.scm
-;; this function is being used to see if my hash tables
-;; are being insertted correctly
-;; basically prints out the key and value of hash table
+;; FROM symbols.scm
+;; this function is just being used to see if
+;; hash tables are being inserted correctly
+;; I don't call it, just for testing purpose
+
 (define (what-kind value)
     (cond ((real? value) 'real)
           ((vector? value) 'vector)
           ((procedure? value) 'procedure)
           (else 'other)))
-;; this is the main of the program
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+
+
+
+;; FUNCTION MAIN
 (define (main arglist)
-    ;; this part checks if there are 2 arguments in terminal
-    ;; if not goes to the function 'usage-exit' to print
     (if (or (null? arglist) (not (null? (cdr arglist))))
         (usage-exit)
         (let* ((sbprogfile (car arglist))
                (program (readlist-from-inputfile sbprogfile)))
-               
-               ;;my tester used to test if i was getting the label
-               ; (display (cdar program))
-
-               ;;this puts the labels of the input into a hash table 
+              
+              ;; given function which cats the SBIR file
+              ; (write-program-by-line sbprogfile program)
+              ;               (printf "~~~~~~~~ ~n")
+               ;; this checks to see if the SBIR file has labels
+               ;; if a line contains a label, 
+               ;;it will put the label (key)
+               ;; in the label hashtable (*hash), and the value will 
+               ;; everything from the start of that line number
                (put-in-hash program)
-               (interpret-program program)
-                ; (display  (hash-ref *hash* label))
-                ; (newline)
-                (printf "~~~~~~~~ ~n")
-                ;; this is to test if the label hash is being inputted correctly
-                ; (hash-for-each *hash*
-                ;     (lambda (key value)
-                ;     (printf "~s : ~s = ~s~n" key (what-kind value) value))
-                ; )
-              (write-program-by-line sbprogfile program))))
 
-(when (terminal-port? *stdin*)
-      (main (vector->list (current-command-line-arguments))))
+               ;; interpret-program reads each line of the SBIR file
+               ;; and calls evalexp depending on what the task.
+               (interpret-program program))))
 
+
+(main (vector->list (current-command-line-arguments))) 
 
 
 
