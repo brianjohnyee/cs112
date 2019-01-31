@@ -14,7 +14,7 @@ let rec eval_expr (expr : Absyn.expr) : float = match expr with
     		| Variable ident ->
     			Hashtbl.find Tables.variable_table ident
     		| Arrayref (ident, expr) ->
-    			Array.get (Hashtbl.find Tables.array_table ident) (int_of_float(eval_expr expr) - 1)
+    			Array.get (Hashtbl.find Tables.array_table ident) (int_of_float(eval_expr expr))
     	)
     | Unary (oper, expr) -> 
     	let x = Hashtbl.find Tables.unary_fn_table oper
@@ -49,8 +49,8 @@ let interp_stmt (stmt : Absyn.stmt) = match stmt with
     	(match memref with
     	| Variable ident -> 
     		(Hashtbl.add Tables.variable_table ident (eval_expr expr ))
-    	| Arrayref (ident, expr) ->
-      		(Array.set (Hashtbl.find Tables.array_table ident)  (int_of_float(eval_expr expr) - 1) (eval_expr expr))
+    	| Arrayref (ident, exprr) ->
+      		(Array.set (Hashtbl.find Tables.array_table ident)  (int_of_float(eval_expr exprr)) (eval_expr expr) )
     	)
     | Goto label -> unimpl "Goto label"
     | If (expr, label) -> unimpl "If (expr, label)"
