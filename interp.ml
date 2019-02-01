@@ -66,9 +66,10 @@ let rec interpret (program : Absyn.program) = match program with
 let rec checkLabels (program : Absyn.program) = match program with
     | [] -> ()	
     | firstline::otherlines -> match firstline with
-    	| _, _, None -> checkLabels otherlines
-    	| _, _, Some label -> 
-    		print_string "hi";
+    	| _, None, _ -> checkLabels otherlines
+    	| _, Some label, _ -> 
+    		print_string label;
+    		(Hashtbl.add Tables.label_table label otherlines);
     		(checkLabels otherlines)
 
 
