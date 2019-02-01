@@ -52,7 +52,10 @@ let interp_stmt (stmt : Absyn.stmt) = match stmt with
     	| Arrayref (ident, exprr) ->
       		(Array.set (Hashtbl.find Tables.array_table ident)  (int_of_float(eval_expr exprr)) (eval_expr expr) )
     	)
-    | Goto label -> print_string "hi"
+    | Goto label -> 
+    		print_string "."
+(*    		 (Hashtbl.find Tables.label_table label)
+ *)
     | If (expr, label) -> unimpl "If (expr, label)"
     | Print print_list -> interp_print print_list
     | Input memref_list -> interp_input memref_list
@@ -61,15 +64,19 @@ let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
     | firstline::otherlines -> match firstline with
       | _, _, None -> interpret otherlines
-      | _, _, Some stmt -> (interp_stmt stmt; interpret otherlines)
+      | _, _, Some stmt -> (match stmt with
+      	| Goto label ->
+      		interpret (Hashtbl.find Tables.label_table label)
+      	| _ -> (interp_stmt stmt; interpret otherlines)
+      )
 
 let rec checkLabels (program : Absyn.program) = match program with
     | [] -> ()	
     | firstline::otherlines -> match firstline with
     	| _, None, _ -> checkLabels otherlines
     	| _, Some label, _ -> 
-    		print_string label;
     		(Hashtbl.add Tables.label_table label otherlines);
+
     		(checkLabels otherlines)
 
 
