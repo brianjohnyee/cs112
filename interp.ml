@@ -36,11 +36,16 @@ let interp_print (print_list : Absyn.printable list) =
 
 let interp_input (memref_list : Absyn.memref list) =
     let input_number memref =
-        try  let number = Etc.read_number ()
-             in (print_float number; print_newline ())
-        with End_of_file -> 
-             (print_string "End_of_file"; print_newline ())
-    in List.iter input_number memref_list
+        (match memref with
+        | Arrayref (ident,expr)-> print_string "kenirngierngneirgn";
+        | Variable ident ->
+       		try  let number = Etc.read_number ()
+            in (Hashtbl.add Tables.variable_table ident number)
+        	with End_of_file -> 
+        	(Hashtbl.replace Tables.variable_table "eof" 1.0)
+
+        )
+    in (List.iter input_number memref_list; print_newline ())
 
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
     | Dim (ident, expr) -> 
@@ -59,7 +64,10 @@ let interp_stmt (stmt : Absyn.stmt) = match stmt with
     | If (expr, label) -> 
     	print_string "."
     | Print print_list -> interp_print print_list
-    | Input memref_list -> interp_input memref_list
+    | Input memref_list -> 
+    	if (<=) (Hashtbl.find Tables.variable_table "eof") (0.0) 
+    		then
+    			interp_input memref_list
 
 let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
@@ -78,6 +86,8 @@ let rec interpret (program : Absyn.program) = match program with
 		    			if (Hashtbl.find Tables.boolean_table oper) (eval_expr expr1) (eval_expr expr2) 
 		    				then 
 		    					interpret(Hashtbl.find Tables.label_table label)
+		    				else
+		    					interpret(otherlines)
 		    	)
 	      	| _ -> 
 	      		(interp_stmt stmt; interpret otherlines)
