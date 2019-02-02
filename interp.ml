@@ -53,10 +53,11 @@ let interp_stmt (stmt : Absyn.stmt) = match stmt with
       		(Array.set (Hashtbl.find Tables.array_table ident)  (int_of_float(eval_expr exprr)) (eval_expr expr) )
     	)
     | Goto label -> 
-    		print_string "."
-(*    		 (Hashtbl.find Tables.label_table label)
- *)
-    | If (expr, label) -> unimpl "If (expr, label)"
+    	(* this shouldn't be called. it is called in interpret *)
+    	print_string "."
+		(*(Hashtbl.find Tables.label_table label)*)
+    | If (expr, label) -> 
+    	print_string "."
     | Print print_list -> interp_print print_list
     | Input memref_list -> interp_input memref_list
 
@@ -64,26 +65,27 @@ let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
     | firstline::otherlines -> match firstline with
       | _, _, None -> interpret otherlines
-      | _, _, Some stmt -> (match stmt with
-      	| Goto label ->
-      		interpret (Hashtbl.find Tables.label_table label)
-      	| _ -> (interp_stmt stmt; interpret otherlines)
-      )
-
-let rec checkLabels (program : Absyn.program) = match program with
-    | [] -> ()	
-    | firstline::otherlines -> match firstline with
-    	| _, None, _ -> checkLabels otherlines
-    	| _, Some label, _ -> 
-    		(Hashtbl.add Tables.label_table label otherlines);
-
-    		(checkLabels otherlines)
-
+      | _, _, Some stmt -> 
+      	(match stmt with
+	      	| Goto label ->
+	      		interpret (Hashtbl.find Tables.label_table label)
+	      	| If (expr, label) ->
+		    	(match expr with
+		    		| Number number -> print_string ""
+		    		| Memref memref -> print_string ""
+		    		| Unary (oper,expr) -> print_string ""
+		    		| Binary (oper,expr1,expr2)->
+		    			if (Hashtbl.find Tables.boolean_table oper) (eval_expr expr1) (eval_expr expr2) 
+		    				then 
+		    					interpret(Hashtbl.find Tables.label_table label)
+		    	)
+	      	| _ -> 
+	      		(interp_stmt stmt; interpret otherlines)
+     	)
 
 let interpret_program program =
 (* 	 print_string "hi";
  *)  
- 	checkLabels program;
  	 (Tables.init_label_table program; 
      if !want_dump then Tables.dump_label_table ();
      if !want_dump then Dumper.dump_program program;
