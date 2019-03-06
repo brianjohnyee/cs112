@@ -1,0 +1,341 @@
+#!/usr/bin/perl
+#Brian Yee byee4
+
+use strict;
+use warnings;
+use Getopt::Std;
+
+$0 =~ s|.*/||;
+
+# output from sigtoperl.cpp
+# prints out a description of all the signals
+my %strsignal = (
+    1 => "Hangup",
+    2 => "Interrupt",
+    3 => "Quit",
+    4 => "Illegal instruction",
+    5 => "Trace/breakpoint trap",
+    6 => "Aborted",
+    7 => "Bus error",
+    8 => "Floating point exception",
+    9 => "Killed",
+    11 => "Segmentation fault",
+    13 => "Broken pipe",
+    14 => "Alarm clock",
+    15 => "Terminated",
+    16 => "Stack fault",
+    17 => "Child exited",
+    18 => "Continued",
+    19 => "Stopped (signal)",
+    20 => "Stopped",
+    21 => "Stopped (tty input)",
+    22 => "Stopped (tty output)",
+    24 => "CPU time limit exceeded",
+    25 => "File size limit exceeded",
+    26 => "Virtual timer expired",
+    27 => "Profiling timer expired",
+    28 => "Window changed",
+    29 => "I/O possible",
+    30 => "Power failure",
+  31 => "Bad system call",
+);
+
+# exit status
+my $exit_status = 0;
+END {exit $exit_status}
+
+# hashtables.
+my %macro;
+my %targetHash;
+
+# initalize array refernce to hold target:prereqs
+my @targetArray;
+
+# found this on perl-notes page 5 on how to iterate through
+# each key in hash table
+sub macro_substitution {
+  foreach my $target (keys %targetHash) {
+    $_ = $targetHash{$target}{'depend'};
+    my @depend;
+    # if there is a dependency
+    if (not defined) {
+      my $notDefined = 1;
+    }
+    else{
+      # subsitute the target with macro table
+      # just like a variable
+      $_ =~ s/\$\{([^}]+)\}/$macro{$1}/;
+      #http://perlmeme.org/howtos/perlfunc/split_function.html 
+      @depend = split;   
+    }
+    $targetHash{$target}{'depend'} = \@depend;
+    #returns an array of selected values
+    # changes the commmands if it has a macro
+    # what the while does just like above in if statement
+    # had to use a while loop? not sure why.
+    for (@{$targetHash{$target}{'command'}}) {
+      while ($_ =~ s/\$\{([^}]+)\}/$macro{$1}/) {
+      }
+    }
+  }
+}
+
+#checks what kind of target. if wildcard or not
+sub targetChecker {
+  # print "($_)";
+  # target = targets that we are using
+  my $target = $_[0];
+  # print "~~\n";
+  #print "($target)\n";
+  my @targetSplit = split /\./;
+  my $targetName = $targetSplit[0];
+  #print "$targetName\n";
+  my $targetO = $targetSplit[1];
+  # if (defined $targetO){
+  #   print "$targetO\n";
+  # }
+  #targetArray holds all the targets
+  # this loops through all of the targest in the makefile
+  # until it finds a match with the targets we are using and goes
+  # into one of the if statements. Should keep doing based on how
+  # many targets are in the makefile. Test4 -> 9 times
+  # enhanced for loop
+  for (@targetArray) {
+    #print "@targetArray\n";
+    # print "$_";
+    # print "hi";
+    # print "$target\n";
+    if ($_ eq $target) {
+      #  print "$_\n";
+      # print "~~~\n";
+      # print "$target\n";
+      # print "$targetName\n";
+      makeTarget ($_, $targetName);
+      return;
+    }
+    # matches wildcards
+    # this checks for targets th
+    if (defined $targetO && $_ eq "%.$targetO") {
+      # print "$_\n";
+      # print "~~~\n";
+      # print "%.$targetO\n";
+      # print "$targetName\n";
+      makeTarget ("%.$targetO", $targetName);
+      return;
+    }
+  }
+}
+
+#executes commands of makefile
+sub execute {
+  my ($target, $targetName) = @_;
+  $target =~ s/%/$targetName/;
+  my $dependencies = ${$targetHash{$_[0]}{'depend'}}[0];
+  # print "$dependencies\n";
+  # dependencies = depency main.c hello.c main.o hello for test4
+  $dependencies =~ s/%/$targetName/ if defined $dependencies;
+  #print "$dependencies\n";
+  for (@{$targetHash{$_[0]}{'command'}}) {
+    # print "hi";
+    my $commands = $_;
+    #print "$commands\n";
+    my $exit_ignore = 0;
+    # if command starts with - 
+    # such as rm
+    if ($commands =~ s/^-\s//) {
+      #print "bye";
+      $exit_ignore = 1;
+    }
+    $commands =~ s/\$</$dependencies/g;
+    $commands =~ s/\$@/$target/g;
+    print "$commands\n" if not ($commands =~ s/^@\s//);
+    system ($commands);
+    # The following code can be used to 
+    # extract this informatio. this is from the 
+    # commentary (b)
+    my $term_signal = $? & 0x7F;
+    my $core_dumped = $? & 0x80;
+    my $exit_stat = ($? >> 8) & 0xFF;
+    # needed for errors
+    if ($exit_stat != 0) {
+      printf "%s: %s[%s] Error %d%s\n", $0,
+      $exit_ignore ? '' : '*** ', $target,
+      $exit_stat, $exit_ignore ? ' (ignored)' : '';
+      if (!$exit_ignore) {
+        exit 2;
+      } else {
+        $exit_status = $exit_stat;
+      }
+    }
+  }
+}
+
+#from mtime.perl example
+sub mtime{
+  my @stat = stat $_[0];
+  return $stat[9];
+}
+
+# calls execute on the target,
+# if there is a dependency that has not been modify
+# call back targetchecker
+sub makeTarget {
+  my $counter = 0;
+  my ($target, $targetName) = @_;
+  # print("($targetName)");
+  $target =~ s/%/$targetName/;
+  #print("($target)");
+  $counter = 1;
+  # this calls targetChecker on the dependency
+  # if there is one
+  # print " (@{$targetHash{$_[0]}{'depend'}})\n";
+  for (@{$targetHash{$_[0]}{'depend'}}) {
+    #print " (@{$targetHash{$_[0]}{'depend'}})";
+    #print "carrie\n";
+    my $dependency = $_;
+    #print "$dependency\n";
+    $dependency =~ s/%/$targetName/;
+    my $dependencyMTIME = mtime ($dependency);
+    if (defined $dependencyMTIME){
+      my $filler = 0;
+    }
+    else{
+      #print($dependency);
+      #print "wepofmwef\n";
+      targetChecker ($dependency);
+      next;
+    }
+  }
+  # print "($_[0])";
+  # print "($targetName)\n";
+  # (%.0,main) or (hello,hello)
+  if ($counter != 0){
+    execute ($_[0], $targetName)
+  }
+}
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# function main 
+# read in makefile, store marcros in hashtable, store
+# target/prereq in hashtable, swap macros to actual
+# targets, execute commands.
+
+# setting the makefile to read
+my $makefile = './Makefile';
+
+#https://perldoc.perl.org/functions/open.html
+# die shoule be an error if it can't open the file
+open (my $fh, "<", "$makefile") or die "$makefile: $!";
+while (<$fh>) {
+  #matches beginning of string/line is in Range A-Z
+  # matches any whitespace characters 0 or more
+  # matches "=""
+  # this is because for example test4 Makefile
+  # the first macro is 
+  # MKFILE = Makefile
+  if (/(^[A-Z]+)\s*=/) {
+    # use chomp just to get that single line
+    chomp;
+    # creates an array, and splits the line
+    # array should be length 2 with name of
+    # macro in the first, and what the macro
+    # equals to in the second
+    my @secondPartofMacro = split /\s*=\s*/;
+    # hash table macro key = patern matched
+    # value = second index of the split
+    # https://www.tutorialspoint.com/perl/perl_hashes.htm
+    $macro{$1} = $secondPartofMacro[1];
+  }
+}
+close $fh;
+
+# keep each target in a hash with the prereq and commands
+# as a reference to a list
+# creating target hashtable
+open ($fh, "<", "$makefile") or die "$makefile: $!";
+my $commandReference;
+while (<$fh>) {
+  # this matches comments
+  # which we ignore by going next
+  next if (/^#|^ifeq|^endif|^include|^[A-Z]/);
+  if (/^\t/) {
+    # gets rid of the tab spaces
+    $_ =~ s/\t|\n//g;
+    #https://www.tutorialspoint.com/perl/perl_push.htm
+    push (@$commandReference, $_);
+    # finished with this line, iterate to next line
+    next;
+  }
+  # matches any non white space character
+  # makes group 1 = \S+
+  if (/(\S+)\s*:/) {
+    # so we only get the single line with the 
+    # target : prereq
+    chomp;
+    my @commands;
+    $commandReference = \@commands;
+    # split the target : prereq by the ':'
+    my @splitDependency = split /\s*:\s*/;
+    # should = prereq
+    my $depend = $splitDependency[1];
+    # 'Thus, the following will point $p at a struct with two fields'
+    my $p = {'depend' => $depend, 'command' => $commandReference};
+    # $1 = (\S+)
+    my $target = $1;
+    # if the target was in the notation of {blahblah}
+    # then we replace the target with the macro
+    # we stored earlier. essentially this is like a variable
+    $target =~ s/\$\{([^}]+)\}/$macro{$1}/;
+    # set the key and value of target hashtable
+    # key = target, value = struct of dependency and command
+    $targetHash{$target} = $p;
+    # using array reference to hold the target : prereqs
+    push (@targetArray, $target);
+  }
+}
+close $fh;
+
+macro_substitution();
+
+# print "@targetArray";
+# print "$_";
+# should be the first target in the makefile
+# if you just c
+# if (not defined $ARGV[0]){
+#   print "hi";
+# }
+$ARGV[0] = $targetArray[0] if not defined $ARGV[0];
+# print "$ARGV[0]";
+for (@ARGV) {
+  # print "$ARGV[1]";
+  targetChecker ($_);
+  #print "($_)";
+  # print "$_";
+}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+#from mtime.perl example
+my %OPTIONS;
+getopts ('d', \%OPTIONS);
+
+# debugger prints out the Macros and targets
+# basically should print out the makefile
+# if it does, everything is being put into 
+# hashtable correctly
+sub debugger {
+    print "\n The Macros are listed below\n";
+    print "$_ = $macro{$_}\n" for keys %macro;
+    print "\n The Targets and commands\n";
+    for my $target (keys %targetHash) {
+      print "$target :";
+      print " $_" for @{$targetHash{$target}{'depend'}};
+      print "\n";
+      print "\t$_\n" for @{$targetHash{$target}{'command'}};
+    }
+}
+debugger() if defined $OPTIONS{'d'};
+# have to put debugger at end, because if I put in top,
+# we dont read in the macro/targets
+
